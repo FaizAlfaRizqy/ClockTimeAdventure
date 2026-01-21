@@ -21,7 +21,7 @@ FPS = 60
 
 # Clock constants
 CLOCK_ICON_SIZE = 128
-CLOCK_DISPLAY_SIZE = 400
+CLOCK_DISPLAY_SIZE = 800
 CLOCK_CENTER_X = SCREEN_WIDTH // 2
 CLOCK_CENTER_Y = SCREEN_HEIGHT // 2
 
@@ -412,10 +412,9 @@ class Game:
         overlay.fill(BLACK)
         self.screen.blit(overlay, (0, 0))
         
-        # White background for clock
+        # Draw clock image
         cx, cy = CLOCK_CENTER_X, CLOCK_CENTER_Y
         clock_radius = CLOCK_DISPLAY_SIZE // 2 + 10
-        pygame.draw.circle(self.screen, WHITE, (cx, cy), clock_radius)
         
         # Draw clock image (same size as white circle)
         clock_full_size = clock_radius * 2
@@ -438,14 +437,14 @@ class Game:
         
         # Draw minute hand (longer, thinner)
         minute_angle_rad = math.radians(self.minute_angle - 90)
-        minute_length = CLOCK_DISPLAY_SIZE // 2 - 40
+        minute_length = CLOCK_DISPLAY_SIZE // 2 - 250
         minute_x = cx + math.cos(minute_angle_rad) * minute_length
         minute_y = cy + math.sin(minute_angle_rad) * minute_length
         pygame.draw.line(self.screen, DARK_BLUE, (cx, cy), (minute_x, minute_y), 4)
         
         # Draw hour hand (shorter, thicker)
         hour_angle_rad = math.radians(self.hour_angle - 90)
-        hour_length = CLOCK_DISPLAY_SIZE // 2 - 80
+        hour_length = CLOCK_DISPLAY_SIZE // 2 - 320
         hour_x = cx + math.cos(hour_angle_rad) * hour_length
         hour_y = cy + math.sin(hour_angle_rad) * hour_length
         pygame.draw.line(self.screen, RED, (cx, cy), (hour_x, hour_y), 6)
