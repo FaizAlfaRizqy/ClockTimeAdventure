@@ -74,6 +74,38 @@ class Game:
         self.dragging_hand = None  # 'hour', 'minute', or None
         self.clock_icon_rect = pygame.Rect(10, 10, CLOCK_ICON_SIZE, CLOCK_ICON_SIZE)
         
+        # Trees
+        self.trees = [
+            {'x': 2, 'y': 50},
+            {'x': 100, 'y': 230},
+            {'x': 350, 'y': 150},
+            {'x': 350, 'y': 250},
+        ]
+        self.load_tree()
+        
+        # Watering state
+        self.watering = False
+        self.watering_side = None  # 'left' or 'right'
+        self.watering_timer = 0
+        self.watering_duration = 1.0  # seconds
+        
+        # Missions
+        self.missions = [
+            {
+                'id': 1,
+                'title': 'Siram pohon pada jam 1',
+                'description': 'Set jam ke 01:00 lalu siram pohon',
+                'completed': False,
+                'required_hour': 1  # 1 o'clock = 30 degrees
+            }
+        ]
+        self.mission_box_rect = pygame.Rect(150, 10, 300, 120)
+        
+        # Notification system
+        self.notification_text = ""
+        self.notification_timer = 0
+        self.notification_duration = 3.0  # seconds
+        
     def load_sprites(self):
         """Load or generate player sprites"""
         self.sprites = {}
@@ -107,6 +139,9 @@ class Game:
                 self.sprites[key], 
                 (16 * SCALE, 16 * SCALE)
             )
+        
+        # Load watering sprites
+        self.load_watering_sprites()
     
     def generate_sprites(self):
         """Generate simple placeholder sprites"""
@@ -148,6 +183,94 @@ class Game:
         pygame.draw.rect(walk2, pants, (9, 11, 3, 5))  # Right leg forward
         pygame.draw.rect(walk2, pants, (4, 12, 3, 4))  # Left leg back
         self.sprites['walk2'] = walk2
+    
+    def load_watering_sprites(self):
+        """Load watering sprites"""
+        sprite_folder = 'char'
+        watering_files = ['watering-left1.png', 'watering-left2.png', 
+                         'watering-right1.png', 'watering-right2.png']
+        
+        # Check if sprites exist
+        sprite_paths = [os.path.join(sprite_folder, f) for f in watering_files]
+        all_exist = all(os.path.exists(p) for p in sprite_paths)
+        
+        if all_exist:
+            print(f"Loading watering sprites from {sprite_folder}/ folder...")
+            for sprite_file, sprite_path in zip(watering_files, sprite_paths):
+                sprite_name = sprite_file.replace('.png', '')
+                self.sprites[sprite_name] = pygame.image.load(sprite_path).convert_alpha()
+                self.sprites[sprite_name] = pygame.transform.scale(
+                    self.sprites[sprite_name], 
+                    (16 * SCALE, 16 * SCALE)
+                )
+        else:
+            print("Generating watering sprites programmatically...")
+            self.generate_watering_sprites()
+    
+    def generate_watering_sprites(self):
+        """Generate simple placeholder watering sprites"""
+        sprite_size = 16
+        
+        # Color definitions
+        skin = (255, 204, 153)
+        shirt = (51, 102, 204)
+        pants = (77, 51, 26)
+        water_can = (150, 150, 150)
+        
+        # Create watering-left1
+        wl1 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(wl1, skin, (6, 2, 4, 4))  # Head
+        pygame.draw.rect(wl1, shirt, (5, 6, 6, 5))  # Body
+        pygame.draw.rect(wl1, pants, (5, 11, 3, 5))  # Legs
+        pygame.draw.rect(wl1, pants, (8, 11, 3, 5))
+        pygame.draw.rect(wl1, water_can, (2, 5, 3, 4))  # Water can on left
+        self.sprites['watering-left1'] = pygame.transform.scale(wl1, (16 * SCALE, 16 * SCALE))
+        
+        # Create watering-left2
+        wl2 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(wl2, skin, (6, 2, 4, 4))
+        pygame.draw.rect(wl2, shirt, (5, 6, 6, 5))
+        pygame.draw.rect(wl2, pants, (5, 11, 3, 5))
+        pygame.draw.rect(wl2, pants, (8, 11, 3, 5))
+        pygame.draw.rect(wl2, water_can, (1, 6, 3, 4))  # Water can slightly lower
+        self.sprites['watering-left2'] = pygame.transform.scale(wl2, (16 * SCALE, 16 * SCALE))
+        
+        # Create watering-right1
+        wr1 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(wr1, skin, (6, 2, 4, 4))  # Head
+        pygame.draw.rect(wr1, shirt, (5, 6, 6, 5))  # Body
+        pygame.draw.rect(wr1, pants, (5, 11, 3, 5))  # Legs
+        pygame.draw.rect(wr1, pants, (8, 11, 3, 5))
+        pygame.draw.rect(wr1, water_can, (11, 5, 3, 4))  # Water can on right
+        self.sprites['watering-right1'] = pygame.transform.scale(wr1, (16 * SCALE, 16 * SCALE))
+        
+        # Create watering-right2
+        wr2 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(wr2, skin, (6, 2, 4, 4))
+        pygame.draw.rect(wr2, shirt, (5, 6, 6, 5))
+        pygame.draw.rect(wr2, pants, (5, 11, 3, 5))
+        pygame.draw.rect(wr2, pants, (8, 11, 3, 5))
+        pygame.draw.rect(wr2, water_can, (12, 6, 3, 4))  # Water can slightly lower
+        self.sprites['watering-right2'] = pygame.transform.scale(wr2, (16 * SCALE, 16 * SCALE))
+    
+    def load_tree(self):
+        """Load tree sprite"""
+        tree_path = os.path.join('char', 'tree1.png')
+        
+        if os.path.exists(tree_path):
+            print(f"Loading tree from {tree_path}...")
+            self.tree_image = pygame.image.load(tree_path).convert_alpha()
+            # Scale tree to 128x128 pixels
+            self.tree_sprite = pygame.transform.scale(self.tree_image, (128, 128))
+        else:
+            print("Tree image not found, creating placeholder...")
+            # Create simple placeholder tree (128x128)
+            self.tree_sprite = pygame.Surface((128, 128), pygame.SRCALPHA)
+            # Tree trunk
+            pygame.draw.rect(self.tree_sprite, (101, 67, 33), (24, 40, 16, 24))
+            # Tree leaves (green circle)
+            pygame.draw.circle(self.tree_sprite, (34, 139, 34), (32, 24), 24)
+            pygame.draw.circle(self.tree_sprite, (46, 125, 50), (32, 24), 20)
     
     def load_clock(self):
         """Load clock image"""
@@ -246,6 +369,10 @@ class Game:
                         self.clock_ui_active = False
                     else:
                         self.running = False
+                elif event.key == pygame.K_SPACE or event.key == pygame.K_e:
+                    # Check if near a tree and start watering
+                    if not self.clock_ui_active and not self.watering:
+                        self.check_watering_action()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
                     mouse_pos = pygame.mouse.get_pos()
@@ -314,8 +441,87 @@ class Game:
         elif self.dragging_hand == 'minute':
             self.minute_angle = angle
     
+    def is_clock_set_to_hour(self, hour):
+        """Check if clock is set to specific hour (1-12)"""
+        # Convert hour to angle (12 o'clock = 0 degrees, 1 o'clock = 30 degrees, etc.)
+        target_angle = (hour % 12) * 30
+        # Allow 15 degree tolerance (±15 degrees)
+        angle_diff = abs(self.hour_angle - target_angle)
+        # Handle wrap-around (e.g., 350 degrees should be close to 0 degrees)
+        if angle_diff > 180:
+            angle_diff = 360 - angle_diff
+        return angle_diff <= 15
+    
+    def is_near_tree(self):
+        """Check if player is near any tree"""
+        player_x = self.player['x']
+        player_y = self.player['y']
+        
+        for tree in self.trees:
+            dx = tree['x'] - player_x
+            dy = tree['y'] - player_y
+            distance = math.sqrt(dx**2 + dy**2)
+            
+            if distance < 70:
+                return True
+        return False
+    
+    def check_watering_action(self):
+        """Check if player is near a tree and start watering"""
+        # Check if clock is set to correct time for active mission
+        mission = self.missions[0]  # First mission
+        if not mission['completed'] and not self.is_clock_set_to_hour(mission['required_hour']):
+            # Clock not set to correct time, show message
+            print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
+            return
+        
+        player_x = self.player['x']
+        player_y = self.player['y']
+        
+        for tree in self.trees:
+            # Check distance to tree (within 70 pixels)
+            dx = tree['x'] - player_x
+            dy = tree['y'] - player_y
+            distance = math.sqrt(dx**2 + dy**2)
+            
+            if distance < 70:
+                # Determine if tree is on left or right
+                if dx < 0:
+                    self.watering_side = 'left'
+                else:
+                    self.watering_side = 'right'
+                
+                self.watering = True
+                self.watering_timer = 0
+                
+                # Complete mission if not completed
+                if not mission['completed']:
+                    mission['completed'] = True
+                    self.notification_text = f"MISI SELESAI: {mission['title']}!"
+                    self.notification_timer = 0
+                    print(f"Misi selesai: {mission['title']}!")
+                
+                return
+    
     def update(self, dt):
         """Update game state"""
+        # Update notification timer
+        if self.notification_timer < self.notification_duration:
+            self.notification_timer += dt
+        
+        # Update watering animation
+        if self.watering:
+            self.watering_timer += dt
+            if self.watering_timer >= self.watering_duration:
+                self.watering = False
+                self.watering_timer = 0
+            # Update animation during watering
+            self.player['animation_timer'] += dt
+            if self.player['animation_timer'] >= self.animation_speed:
+                self.player['animation_timer'] = 0
+                self.player['animation_frame'] = (self.player['animation_frame'] + 1) % 2
+            return
+        
         # Only update player if clock UI is not active
         if not self.clock_ui_active:
             keys = pygame.key.get_pressed()
@@ -390,19 +596,121 @@ class Game:
         
         player_screen_x = (self.player['x'] - self.camera_x) * SCALE
         player_screen_y = (self.player['y'] - self.camera_y) * SCALE
+        
+        # Draw player (with watering animation if active)
+        if self.watering:
+            frame = self.player['animation_frame'] + 1
+            sprite_key = f'watering-{self.watering_side}{frame}'
+        
         self.screen.blit(self.sprites[sprite_key], (player_screen_x, player_screen_y))
+        
+        # Draw trees on top of player
+        for tree in self.trees:
+            tree_screen_x = (tree['x'] - self.camera_x) * SCALE
+            tree_screen_y = (tree['y'] - self.camera_y) * SCALE
+            self.screen.blit(self.tree_sprite, (tree_screen_x, tree_screen_y))
         
         # Draw clock icon
         self.screen.blit(self.clock_icon, (10, 10))
+        
+        # Draw mission box
+        self.draw_mission_box()
         
         # Draw clock UI if active
         if self.clock_ui_active:
             self.draw_clock_ui()
         
+        # Draw watering prompt
+        self.draw_watering_prompt()
+        
+        # Draw notification
+        self.draw_notification()
+        
         # Draw debug info
         self.draw_debug_info()
         
         pygame.display.flip()
+    
+    def draw_mission_box(self):
+        """Draw mission box next to clock icon"""
+        # Background box
+        mission_bg = pygame.Surface((300, 120))
+        mission_bg.set_alpha(200)
+        mission_bg.fill((40, 40, 60))
+        self.screen.blit(mission_bg, (150, 10))
+        
+        # Border
+        pygame.draw.rect(self.screen, WHITE, (150, 10, 300, 120), 2)
+        
+        # Title
+        font_title = pygame.font.Font(None, 28)
+        title_surface = font_title.render("MISI", True, (255, 215, 0))
+        self.screen.blit(title_surface, (160, 20))
+        
+        # Mission list
+        font_mission = pygame.font.Font(None, 22)
+        y_offset = 50
+        
+        for mission in self.missions:
+            # Mission status icon
+            status_color = (0, 255, 0) if mission['completed'] else (255, 100, 100)
+            status_text = "✓" if mission['completed'] else "○"
+            status_surface = font_mission.render(status_text, True, status_color)
+            self.screen.blit(status_surface, (160, y_offset))
+            
+            # Mission title
+            title_color = (0, 255, 0) if mission['completed'] else WHITE
+            mission_surface = font_mission.render(mission['title'], True, title_color)
+            self.screen.blit(mission_surface, (185, y_offset))
+            
+            # Mission description (smaller)
+            if not mission['completed']:
+                font_desc = pygame.font.Font(None, 18)
+                desc_surface = font_desc.render(mission['description'], True, (180, 180, 180))
+                self.screen.blit(desc_surface, (185, y_offset + 22))
+            
+            y_offset += 60
+    
+    def draw_notification(self):
+        """Draw notification message"""
+        if self.notification_timer < self.notification_duration and self.notification_text:
+            font = pygame.font.Font(None, 36)
+            text_surface = font.render(self.notification_text, True, (0, 255, 0))
+            text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 100))
+            
+            # Background
+            bg_rect = text_rect.inflate(40, 20)
+            bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+            bg_surface.set_alpha(200)
+            bg_surface.fill((20, 20, 40))
+            self.screen.blit(bg_surface, bg_rect.topleft)
+            
+            # Border
+            pygame.draw.rect(self.screen, (0, 255, 0), bg_rect, 3)
+            
+            # Text
+            self.screen.blit(text_surface, text_rect)
+    
+    def draw_watering_prompt(self):
+        """Draw watering prompt at bottom of screen"""
+        if self.is_near_tree() and not self.watering and not self.clock_ui_active:
+            font = pygame.font.Font(None, 28)
+            text = "Tekan E untuk menyiram pohon"
+            text_surface = font.render(text, True, WHITE)
+            text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40))
+            
+            # Background
+            bg_rect = text_rect.inflate(30, 15)
+            bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+            bg_surface.set_alpha(180)
+            bg_surface.fill((40, 40, 60))
+            self.screen.blit(bg_surface, bg_rect.topleft)
+            
+            # Border
+            pygame.draw.rect(self.screen, (100, 150, 255), bg_rect, 2)
+            
+            # Text
+            self.screen.blit(text_surface, text_rect)
     
     def draw_clock_ui(self):
         """Draw interactive clock interface"""
@@ -495,6 +803,7 @@ class Game:
         print("\n=== Classic RPG Started ===")
         print("Controls:")
         print("  Arrow Keys or WASD - Move")
+        print("  SPACE or E - Water tree (when near)")
         print("  Click Clock Icon - Open Clock UI")
         print("  Drag Clock Hands - Set Time")
         print("  ESC - Close Clock / Quit")
