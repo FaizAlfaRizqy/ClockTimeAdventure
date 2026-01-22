@@ -104,6 +104,26 @@ class Game:
         ]
         self.load_trunk()
         
+        # Flowers for watering
+        self.flowers = [
+            {'x': 120, 'y': 100, 'watered': False},
+            {'x': 120, 'y': 70, 'watered': False},
+            {'x': 150, 'y': 70, 'watered': False},
+            {'x': 150, 'y': 100, 'watered': False},
+            {'x': 180, 'y': 70, 'watered': False},
+            {'x': 180, 'y': 100, 'watered': False},
+        ]
+        self.load_flower()
+        
+        # Mushrooms for removing
+        self.mushrooms = [
+            {'x': 100, 'y': 200, 'removed': False},
+            {'x': 450, 'y': 180, 'removed': False},
+            {'x': 200, 'y': 280, 'removed': False},
+            {'x': 380, 'y': 80, 'removed': False},
+        ]
+        self.load_mushroom()
+        
         # Watering state
         self.watering = False
         self.watering_side = None  # 'left' or 'right'
@@ -122,6 +142,20 @@ class Game:
         self.cutting_timer = 0
         self.cutting_duration = 1.5  # seconds
         self.trunks_cut = 0
+        
+        # Flower watering state
+        self.flower_watering = False
+        self.flower_watering_side = None  # 'left' or 'right'
+        self.flower_watering_timer = 0
+        self.flower_watering_duration = 1.0  # seconds
+        self.flowers_watered = 0
+        
+        # Mushroom cutting state
+        self.mushroom_cutting = False
+        self.mushroom_cutting_side = None  # 'behind', 'front', 'left', 'right'
+        self.mushroom_cutting_timer = 0
+        self.mushroom_cutting_duration = 1.5  # seconds
+        self.mushrooms_removed = 0
         
         # Missions
         self.missions = [
@@ -145,9 +179,23 @@ class Game:
                 'description': 'Set jam ke 05:00 lalu singkirkan kayu',
                 'completed': False,
                 'required_hour': 5  # 5 o'clock = 150 degrees
+            },
+            {
+                'id': 4,
+                'title': 'Siram bunga',
+                'description': 'Set jam ke 08:00 lalu siram bunga',
+                'completed': False,
+                'required_hour': 8  # 8 o'clock = 240 degrees
+            },
+            {
+                'id': 5,
+                'title': 'Singkirkan semua jamur',
+                'description': 'Set jam ke 09:00 lalu singkirkan jamur',
+                'completed': False,
+                'required_hour': 9  # 9 o'clock = 270 degrees
             }
         ]
-        self.mission_box_rect = pygame.Rect(150, 10, 300, 200)
+        self.mission_box_rect = pygame.Rect(150, 10, 300, 300)
         
         # Notification system
         self.notification_text = ""
@@ -158,28 +206,39 @@ class Game:
         """Load or generate player sprites"""
         self.sprites = {}
         sprite_folder = 'char'
-        sprite_files = ['idle1.png', 'idle2.png', 'walk1.png', 'walk2.png']
+        
+        # Map of actual file names to internal sprite names
+        sprite_mapping = {
+            'idle1.png': 'idle-front1',
+            'idle2.png': 'idle-front2',
+            'idle-back1.png': 'idle-back1',
+            'idle-back2.png': 'idle-back2',
+            'idle-left1.png': 'idle-left1',
+            'idle-left2.png': 'idle-left2',
+            'idle-right1.png': 'idle-right1',
+            'idle-right2.png': 'idle-right2',
+            'walk1.png': 'walk-front1',
+            'walk2.png': 'walk-front2',
+            'walk-back1.png': 'walk-back1',
+            'walk-back2.png': 'walk-back2',
+            'walk-left1.png': 'walk-left1',
+            'walk-left2.png': 'walk-left2',
+            'walk-right1.png': 'walk-right1',
+            'walk-right2.png': 'walk-right2'
+        }
         
         # Check if sprites exist in char folder
-        sprite_paths = [os.path.join(sprite_folder, f) for f in sprite_files]
-        all_exist = all(os.path.exists(p) for p in sprite_paths)
+        sprite_paths = {filename: os.path.join(sprite_folder, filename) for filename in sprite_mapping.keys()}
+        all_exist = all(os.path.exists(path) for path in sprite_paths.values())
         
         if all_exist:
-            print(f"Loading sprites from {sprite_folder}/ folder...")
-            for sprite_file, sprite_path in zip(sprite_files, sprite_paths):
-                sprite_name = sprite_file.replace('.png', '')
+            print(f"Loading directional sprites from {sprite_folder}/ folder...")
+            for filename, sprite_name in sprite_mapping.items():
+                sprite_path = sprite_paths[filename]
                 self.sprites[sprite_name] = pygame.image.load(sprite_path).convert_alpha()
         else:
-            # Try loading from current directory
-            all_exist_current = all(os.path.exists(f) for f in sprite_files)
-            if all_exist_current:
-                print("Loading sprites from current directory...")
-                for sprite_file in sprite_files:
-                    sprite_name = sprite_file.replace('.png', '')
-                    self.sprites[sprite_name] = pygame.image.load(sprite_file).convert_alpha()
-            else:
-                print("Generating sprites programmatically...")
-                self.generate_sprites()
+            print("Generating directional sprites programmatically...")
+            self.generate_sprites()
         
         # Scale sprites
         for key in self.sprites:
@@ -192,7 +251,7 @@ class Game:
         self.load_watering_sprites()
     
     def generate_sprites(self):
-        """Generate simple placeholder sprites"""
+        """Generate simple placeholder directional sprites"""
         sprite_size = 16
         
         # Color definitions
@@ -200,37 +259,101 @@ class Game:
         shirt = (51, 102, 204)
         pants = (77, 51, 26)
         
-        # Create idle1
-        idle1 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(idle1, skin, (6, 2, 4, 4))  # Head
-        pygame.draw.rect(idle1, shirt, (5, 6, 6, 5))  # Body
-        pygame.draw.rect(idle1, pants, (5, 11, 3, 5))  # Left leg
-        pygame.draw.rect(idle1, pants, (8, 11, 3, 5))  # Right leg
-        self.sprites['idle1'] = idle1
+        # IDLE FRONT (down) - frames 1 and 2
+        for i in range(1, 3):
+            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+            pygame.draw.rect(sprite, skin, (6, 2, 4, 4))  # Head
+            pygame.draw.rect(sprite, shirt, (5, 6, 6, 5))  # Body
+            pygame.draw.rect(sprite, pants, (5, 11, 3, 5))  # Left leg
+            pygame.draw.rect(sprite, pants, (8, 11, 3, 5))  # Right leg
+            self.sprites[f'idle-front{i}'] = sprite
         
-        # Create idle2 (slightly different)
-        idle2 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(idle2, skin, (6, 2, 4, 4))
-        pygame.draw.rect(idle2, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(idle2, pants, (5, 11, 3, 5))
-        pygame.draw.rect(idle2, pants, (8, 11, 3, 5))
-        self.sprites['idle2'] = idle2
+        # IDLE BACK (up) - frames 1 and 2
+        for i in range(1, 3):
+            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+            pygame.draw.circle(sprite, skin, (8, 3), 2)  # Head (smaller, back view)
+            pygame.draw.rect(sprite, shirt, (5, 5, 6, 6))  # Body
+            pygame.draw.rect(sprite, pants, (5, 11, 3, 5))  # Left leg
+            pygame.draw.rect(sprite, pants, (8, 11, 3, 5))  # Right leg
+            self.sprites[f'idle-back{i}'] = sprite
         
-        # Create walk1
-        walk1 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(walk1, skin, (6, 2, 4, 4))
-        pygame.draw.rect(walk1, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(walk1, pants, (4, 11, 3, 5))  # Left leg forward
-        pygame.draw.rect(walk1, pants, (9, 12, 3, 4))  # Right leg back
-        self.sprites['walk1'] = walk1
+        # IDLE LEFT - frames 1 and 2
+        for i in range(1, 3):
+            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+            pygame.draw.rect(sprite, skin, (7, 2, 3, 4))  # Head (side view)
+            pygame.draw.rect(sprite, shirt, (6, 6, 5, 5))  # Body
+            pygame.draw.rect(sprite, pants, (6, 11, 2, 5))  # Legs (side view)
+            pygame.draw.rect(sprite, pants, (8, 11, 2, 5))
+            self.sprites[f'idle-left{i}'] = sprite
         
-        # Create walk2
-        walk2 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(walk2, skin, (6, 2, 4, 4))
-        pygame.draw.rect(walk2, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(walk2, pants, (9, 11, 3, 5))  # Right leg forward
-        pygame.draw.rect(walk2, pants, (4, 12, 3, 4))  # Left leg back
-        self.sprites['walk2'] = walk2
+        # IDLE RIGHT - frames 1 and 2
+        for i in range(1, 3):
+            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+            pygame.draw.rect(sprite, skin, (6, 2, 3, 4))  # Head (side view)
+            pygame.draw.rect(sprite, shirt, (5, 6, 5, 5))  # Body
+            pygame.draw.rect(sprite, pants, (6, 11, 2, 5))  # Legs (side view)
+            pygame.draw.rect(sprite, pants, (8, 11, 2, 5))
+            self.sprites[f'idle-right{i}'] = sprite
+        
+        # WALK FRONT (down) - frames 1 and 2
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(sprite, skin, (6, 2, 4, 4))
+        pygame.draw.rect(sprite, shirt, (5, 6, 6, 5))
+        pygame.draw.rect(sprite, pants, (4, 11, 3, 5))  # Left leg forward
+        pygame.draw.rect(sprite, pants, (9, 12, 3, 4))  # Right leg back
+        self.sprites['walk-front1'] = sprite
+        
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(sprite, skin, (6, 2, 4, 4))
+        pygame.draw.rect(sprite, shirt, (5, 6, 6, 5))
+        pygame.draw.rect(sprite, pants, (9, 11, 3, 5))  # Right leg forward
+        pygame.draw.rect(sprite, pants, (4, 12, 3, 4))  # Left leg back
+        self.sprites['walk-front2'] = sprite
+        
+        # WALK BACK (up) - frames 1 and 2
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.circle(sprite, skin, (8, 3), 2)
+        pygame.draw.rect(sprite, shirt, (5, 5, 6, 6))
+        pygame.draw.rect(sprite, pants, (4, 11, 3, 5))  # Left leg
+        pygame.draw.rect(sprite, pants, (9, 12, 3, 4))  # Right leg
+        self.sprites['walk-back1'] = sprite
+        
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.circle(sprite, skin, (8, 3), 2)
+        pygame.draw.rect(sprite, shirt, (5, 5, 6, 6))
+        pygame.draw.rect(sprite, pants, (9, 11, 3, 5))  # Right leg
+        pygame.draw.rect(sprite, pants, (4, 12, 3, 4))  # Left leg
+        self.sprites['walk-back2'] = sprite
+        
+        # WALK LEFT - frames 1 and 2
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(sprite, skin, (7, 2, 3, 4))
+        pygame.draw.rect(sprite, shirt, (6, 6, 5, 5))
+        pygame.draw.rect(sprite, pants, (5, 11, 3, 5))  # Front leg
+        pygame.draw.rect(sprite, pants, (8, 12, 2, 4))  # Back leg
+        self.sprites['walk-left1'] = sprite
+        
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(sprite, skin, (7, 2, 3, 4))
+        pygame.draw.rect(sprite, shirt, (6, 6, 5, 5))
+        pygame.draw.rect(sprite, pants, (8, 11, 3, 5))  # Front leg
+        pygame.draw.rect(sprite, pants, (5, 12, 2, 4))  # Back leg
+        self.sprites['walk-left2'] = sprite
+        
+        # WALK RIGHT - frames 1 and 2
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(sprite, skin, (6, 2, 3, 4))
+        pygame.draw.rect(sprite, shirt, (5, 6, 5, 5))
+        pygame.draw.rect(sprite, pants, (8, 11, 3, 5))  # Front leg
+        pygame.draw.rect(sprite, pants, (6, 12, 2, 4))  # Back leg
+        self.sprites['walk-right1'] = sprite
+        
+        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+        pygame.draw.rect(sprite, skin, (6, 2, 3, 4))
+        pygame.draw.rect(sprite, shirt, (5, 6, 5, 5))
+        pygame.draw.rect(sprite, pants, (6, 11, 3, 5))  # Front leg
+        pygame.draw.rect(sprite, pants, (8, 12, 2, 4))  # Back leg
+        self.sprites['walk-right2'] = sprite
     
     def load_watering_sprites(self):
         """Load watering sprites"""
@@ -441,6 +564,48 @@ class Game:
             pygame.draw.rect(sprite, axe, (11, 6 + offset, 4, 2))
             self.sprites[f'cut-right{i}'] = pygame.transform.scale(sprite, (16 * SCALE, 16 * SCALE))
     
+    def load_flower(self):
+        """Load flower sprite"""
+        flower_path = os.path.join('char', 'flower.png')
+        
+        if os.path.exists(flower_path):
+            print(f"Loading flower from {flower_path}...")
+            self.flower_sprite = pygame.image.load(flower_path).convert_alpha()
+            self.flower_sprite = pygame.transform.scale(self.flower_sprite, (32, 64))
+        else:
+            print("Flower sprite not found, creating placeholder...")
+            self.flower_sprite = pygame.Surface((32, 64), pygame.SRCALPHA)
+            # Stem
+            pygame.draw.rect(self.flower_sprite, (34, 139, 34), (14, 16, 4, 16))
+            # Petals (pink/red flower)
+            petal_color = (255, 105, 180)
+            pygame.draw.circle(self.flower_sprite, petal_color, (16, 10), 6)
+            pygame.draw.circle(self.flower_sprite, petal_color, (10, 13), 5)
+            pygame.draw.circle(self.flower_sprite, petal_color, (22, 13), 5)
+            pygame.draw.circle(self.flower_sprite, petal_color, (13, 18), 5)
+            pygame.draw.circle(self.flower_sprite, petal_color, (19, 18), 5)
+            # Center
+            pygame.draw.circle(self.flower_sprite, (255, 255, 0), (16, 14), 4)
+    
+    def load_mushroom(self):
+        """Load mushroom sprite"""
+        mushroom_path = os.path.join('char', 'mushroom.png')
+        
+        if os.path.exists(mushroom_path):
+            print(f"Loading mushroom from {mushroom_path}...")
+            self.mushroom_sprite = pygame.image.load(mushroom_path).convert_alpha()
+            self.mushroom_sprite = pygame.transform.scale(self.mushroom_sprite, (32, 32))
+        else:
+            print("Mushroom sprite not found, creating placeholder...")
+            self.mushroom_sprite = pygame.Surface((32, 32), pygame.SRCALPHA)
+            # Mushroom cap (red)
+            pygame.draw.ellipse(self.mushroom_sprite, (200, 50, 50), (4, 4, 24, 16))
+            # White spots
+            pygame.draw.circle(self.mushroom_sprite, (255, 255, 255), (12, 10), 3)
+            pygame.draw.circle(self.mushroom_sprite, (255, 255, 255), (20, 12), 2)
+            # Stem (beige)
+            pygame.draw.rect(self.mushroom_sprite, (240, 220, 180), (12, 16, 8, 12))
+    
     def load_tree(self):
         """Load tree sprite"""
         tree_path = os.path.join('char', 'tree1.png')
@@ -558,13 +723,17 @@ class Game:
                     else:
                         self.running = False
                 elif event.key == pygame.K_SPACE or event.key == pygame.K_e:
-                    # Check if near a tree/bush/trunk and start action
-                    if not self.clock_ui_active and not self.watering and not self.picking and not self.cutting:
-                        # Try picking first, then cutting, then watering
+                    # Check if near a tree/bush/trunk/flower/mushroom and start action
+                    if not self.clock_ui_active and not self.watering and not self.picking and not self.cutting and not self.flower_watering and not self.mushroom_cutting:
+                        # Try picking first, then cutting, then mushroom cutting, then flower watering, then tree watering
                         if self.is_near_bush():
                             self.check_picking_action()
                         elif self.is_near_trunk():
                             self.check_cutting_action()
+                        elif self.is_near_mushroom():
+                            self.check_mushroom_cutting_action()
+                        elif self.is_near_flower():
+                            self.check_flower_watering_action()
                         else:
                             self.check_watering_action()
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -697,6 +866,36 @@ class Game:
                     return True
         return False
     
+    def is_near_flower(self):
+        """Check if player is near any unwatered flower"""
+        player_x = self.player['x']
+        player_y = self.player['y']
+        
+        for flower in self.flowers:
+            if not flower['watered']:
+                dx = flower['x'] - player_x
+                dy = flower['y'] - player_y
+                distance = math.sqrt(dx**2 + dy**2)
+                
+                if distance < 40:
+                    return True
+        return False
+    
+    def is_near_mushroom(self):
+        """Check if player is near any unremoved mushroom"""
+        player_x = self.player['x']
+        player_y = self.player['y']
+        
+        for mushroom in self.mushrooms:
+            if not mushroom['removed']:
+                dx = mushroom['x'] - player_x
+                dy = mushroom['y'] - player_y
+                distance = math.sqrt(dx**2 + dy**2)
+                
+                if distance < 40:
+                    return True
+        return False
+    
     def check_trunk_collision(self, new_x, new_y):
         """Check if new position collides with any uncut trunk"""
         # Player hitbox (smaller than sprite for better feel)
@@ -709,11 +908,11 @@ class Game:
         for trunk in self.trunks:
             if not trunk['cut']:
                 # Trunk hitbox (64x64 sprite, using slightly smaller collision box)
-                trunk_size = 50
+                trunk_size = 25
                 trunk_left = trunk['x']
                 trunk_right = trunk['x'] + trunk_size
                 trunk_top = trunk['y']
-                trunk_bottom = trunk['y'] + 25
+                trunk_bottom = trunk['y'] + trunk_size
                 
                 # Check for overlap
                 if (player_right > trunk_left and player_left < trunk_right and
@@ -725,7 +924,11 @@ class Game:
         """Check if player is near a tree and start watering"""
         # Check if clock is set to correct time for active mission
         mission = self.missions[0]  # First mission
-        if not mission['completed'] and not self.is_clock_set_to_hour(mission['required_hour']):
+        
+        if mission['completed']:
+            return  # Mission already completed
+            
+        if not self.is_clock_set_to_hour(mission['required_hour']):
             # Clock not set to correct time, show message
             print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
             return
@@ -762,13 +965,21 @@ class Game:
         """Check if player is near a bush and start picking"""
         # Check if clock is set to correct time for picking mission
         mission = self.missions[1]  # Second mission (picking)
-        if not mission['completed']:
-            if not self.is_clock_set_to_hour(mission['required_hour']):
-                print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
-                return
-            if not self.is_minute_at_12():
-                print("Set jarum menit ke angka 12 terlebih dahulu!")
-                return
+        
+        # Check if previous mission is completed
+        if not self.missions[0]['completed']:
+            print("Selesaikan misi sebelumnya terlebih dahulu!")
+            return
+        
+        if mission['completed']:
+            return  # Mission already completed
+            
+        if not self.is_clock_set_to_hour(mission['required_hour']):
+            print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
+            return
+        if not self.is_minute_at_12():
+            print("Set jarum menit ke angka 12 terlebih dahulu!")
+            return
         
         player_x = self.player['x']
         player_y = self.player['y']
@@ -801,13 +1012,21 @@ class Game:
         """Check if player is near a trunk and start cutting"""
         # Check if clock is set to correct time for cutting mission
         mission = self.missions[2]  # Third mission (cutting)
-        if not mission['completed']:
-            if not self.is_clock_set_to_hour(mission['required_hour']):
-                print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
-                return
-            if not self.is_minute_at_12():
-                print("Set jarum menit ke angka 12 terlebih dahulu!")
-                return
+        
+        # Check if previous missions are completed
+        if not self.missions[1]['completed']:
+            print("Selesaikan misi sebelumnya terlebih dahulu!")
+            return
+        
+        if mission['completed']:
+            return  # Mission already completed
+            
+        if not self.is_clock_set_to_hour(mission['required_hour']):
+            print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
+            return
+        if not self.is_minute_at_12():
+            print("Set jarum menit ke angka 12 terlebih dahulu!")
+            return
         
         player_x = self.player['x']
         player_y = self.player['y']
@@ -850,11 +1069,144 @@ class Game:
                     
                     return
     
+    def check_flower_watering_action(self):
+        """Check if player is near a flower and start watering"""
+        # Check if clock is set to correct time for flower watering mission
+        mission = self.missions[3]  # Fourth mission (flower watering)
+        
+        # Check if previous missions are completed
+        if not self.missions[2]['completed']:
+            print("Selesaikan misi sebelumnya terlebih dahulu!")
+            return
+        
+        if mission['completed']:
+            return  # Mission already completed
+            
+        if not self.is_clock_set_to_hour(mission['required_hour']):
+            print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
+            return
+        
+        player_x = self.player['x']
+        player_y = self.player['y']
+        
+        for flower in self.flowers:
+            if not flower['watered']:
+                dx = flower['x'] - player_x
+                dy = flower['y'] - player_y
+                distance = math.sqrt(dx**2 + dy**2)
+                
+                if distance < 40:
+                    # Determine if flower is on left or right
+                    if dx < 0:
+                        self.flower_watering_side = 'left'
+                    else:
+                        self.flower_watering_side = 'right'
+                    
+                    flower['watered'] = True
+                    self.flower_watering = True
+                    self.flower_watering_timer = 0
+                    self.flowers_watered += 1
+                    
+                    # Check if mission is completed
+                    if self.flowers_watered >= 1:
+                        mission = self.missions[3]  # Fourth mission
+                        if not mission['completed']:
+                            mission['completed'] = True
+                            self.notification_text = f"MISI SELESAI: {mission['title']}!"
+                            self.notification_timer = 0
+                            print(f"Misi selesai: {mission['title']}!")
+                    
+                    return
+    
+    def check_mushroom_cutting_action(self):
+        """Check if player is near a mushroom and start cutting"""
+        # Check if clock is set to correct time for mushroom removal mission
+        mission = self.missions[4]  # Fifth mission (mushroom removal)
+        
+        # Check if previous missions are completed
+        if not self.missions[3]['completed']:
+            print("Selesaikan misi sebelumnya terlebih dahulu!")
+            return
+        
+        if mission['completed']:
+            return  # Mission already completed
+            
+        if not self.is_clock_set_to_hour(mission['required_hour']):
+            print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
+            return
+        
+        player_x = self.player['x']
+        player_y = self.player['y']
+        
+        for mushroom in self.mushrooms:
+            if not mushroom['removed']:
+                dx = mushroom['x'] - player_x
+                dy = mushroom['y'] - player_y
+                distance = math.sqrt(dx**2 + dy**2)
+                
+                if distance < 40:
+                    # Determine mushroom position relative to player
+                    if abs(dx) > abs(dy):
+                        # Mushroom is more to the side
+                        if dx < 0:
+                            self.mushroom_cutting_side = 'left'
+                        else:
+                            self.mushroom_cutting_side = 'right'
+                    else:
+                        # Mushroom is more above/below
+                        if dy < 0:
+                            self.mushroom_cutting_side = 'behind'
+                        else:
+                            self.mushroom_cutting_side = 'front'
+                    
+                    # Remove the mushroom
+                    mushroom['removed'] = True
+                    self.mushroom_cutting = True
+                    self.mushroom_cutting_timer = 0
+                    self.mushrooms_removed += 1
+                    
+                    # Check if mission is completed
+                    if self.mushrooms_removed >= len(self.mushrooms):
+                        mission = self.missions[4]  # Fifth mission
+                        if not mission['completed']:
+                            mission['completed'] = True
+                            self.notification_text = f"MISI SELESAI: {mission['title']}!"
+                            self.notification_timer = 0
+                            print(f"Misi selesai: {mission['title']}!")
+                    
+                    return
+    
     def update(self, dt):
         """Update game state"""
         # Update notification timer
         if self.notification_timer < self.notification_duration:
             self.notification_timer += dt
+        
+        # Update mushroom cutting animation
+        if self.mushroom_cutting:
+            self.mushroom_cutting_timer += dt
+            if self.mushroom_cutting_timer >= self.mushroom_cutting_duration:
+                self.mushroom_cutting = False
+                self.mushroom_cutting_timer = 0
+            # Update animation during cutting
+            self.player['animation_timer'] += dt
+            if self.player['animation_timer'] >= self.animation_speed:
+                self.player['animation_timer'] = 0
+                self.player['animation_frame'] = (self.player['animation_frame'] + 1) % 2
+            return
+        
+        # Update flower watering animation
+        if self.flower_watering:
+            self.flower_watering_timer += dt
+            if self.flower_watering_timer >= self.flower_watering_duration:
+                self.flower_watering = False
+                self.flower_watering_timer = 0
+            # Update animation during watering
+            self.player['animation_timer'] += dt
+            if self.player['animation_timer'] >= self.animation_speed:
+                self.player['animation_timer'] = 0
+                self.player['animation_frame'] = (self.player['animation_frame'] + 1) % 2
+            return
         
         # Update picking animation (but allow movement)
         if self.picking:
@@ -971,19 +1323,30 @@ class Game:
         
         # Prepare player sprite data
         state = self.player['state']
+        direction = self.player['direction']
         frame = self.player['animation_frame'] + 1
         
-        # Map state to sprite key
+        # Map direction to sprite direction name
+        dir_map = {'down': 'front', 'up': 'back', 'left': 'left', 'right': 'right'}
+        sprite_dir = dir_map.get(direction, 'front')
+        
+        # Map state to sprite key with direction
         if state == 'idle':
-            sprite_key = f'idle{frame}'
+            sprite_key = f'idle-{sprite_dir}{frame}'
         else:  # walking
-            sprite_key = f'walk{frame}'
+            sprite_key = f'walk-{sprite_dir}{frame}'
         
         player_screen_x = (self.player['x'] - self.camera_x) * SCALE
         player_screen_y = (self.player['y'] - self.camera_y) * SCALE
         
-        # Update sprite key for animations
-        if self.watering:
+        # Update sprite key for animations (watering/cutting override)
+        if self.mushroom_cutting:
+            frame = self.player['animation_frame'] + 1
+            sprite_key = f'cut-{self.mushroom_cutting_side}{frame}'
+        elif self.flower_watering:
+            frame = self.player['animation_frame'] + 1
+            sprite_key = f'watering-{self.flower_watering_side}{frame}'
+        elif self.watering:
             frame = self.player['animation_frame'] + 1
             sprite_key = f'watering-{self.watering_side}{frame}'
         elif self.cutting:
@@ -1034,6 +1397,28 @@ class Game:
                 'screen_y': (bush['y'] - self.camera_y) * SCALE
             })
         
+        # Add flowers (32x32 screen pixels = 16x16 map pixels)
+        for flower in self.flowers:
+            # Always render flowers, even after watered
+            entities.append({
+                'type': 'flower',
+                'y': flower['y'] + 16,  # Bottom of flower sprite in map coordinates
+                'sprite': self.flower_sprite,
+                'x': (flower['x'] - self.camera_x) * SCALE,
+                'screen_y': (flower['y'] - self.camera_y) * SCALE
+            })
+        
+        # Add mushrooms (32x32 screen pixels = 16x16 map pixels)
+        for mushroom in self.mushrooms:
+            if not mushroom['removed']:
+                entities.append({
+                    'type': 'mushroom',
+                    'y': mushroom['y'] + 16,  # Bottom of mushroom sprite in map coordinates
+                    'sprite': self.mushroom_sprite,
+                    'x': (mushroom['x'] - self.camera_x) * SCALE,
+                    'screen_y': (mushroom['y'] - self.camera_y) * SCALE
+                })
+        
         # Sort entities by Y position (depth)
         entities.sort(key=lambda e: e['y'])
         
@@ -1063,50 +1448,67 @@ class Game:
         # Draw notification
         self.draw_notification()
         
-        # Draw debug info
-        self.draw_debug_info()
-        
         pygame.display.flip()
     
     def draw_mission_box(self):
         """Draw mission box next to clock icon"""
-        # Background box (bigger for 3 missions)
-        mission_bg = pygame.Surface((300, 180))
+        # Find current active mission (first incomplete mission)
+        current_mission = None
+        for mission in self.missions:
+            if not mission['completed']:
+                current_mission = mission
+                break
+        
+        # If all missions completed, show completion message
+        if current_mission is None:
+            mission_bg = pygame.Surface((300, 120))
+            mission_bg.set_alpha(200)
+            mission_bg.fill((40, 40, 60))
+            self.screen.blit(mission_bg, (150, 10))
+            
+            pygame.draw.rect(self.screen, (0, 255, 0), (150, 10, 300, 120), 2)
+            
+            font_title = pygame.font.Font(None, 32)
+            title_surface = font_title.render("SEMUA MISI SELESAI!", True, (0, 255, 0))
+            title_rect = title_surface.get_rect(center=(300, 50))
+            self.screen.blit(title_surface, title_rect)
+            
+            font_subtitle = pygame.font.Font(None, 24)
+            subtitle_surface = font_subtitle.render("Selamat!", True, (255, 215, 0))
+            subtitle_rect = subtitle_surface.get_rect(center=(300, 85))
+            self.screen.blit(subtitle_surface, subtitle_rect)
+            return
+        
+        # Draw box for current mission
+        mission_bg = pygame.Surface((300, 140))
         mission_bg.set_alpha(200)
         mission_bg.fill((40, 40, 60))
         self.screen.blit(mission_bg, (150, 10))
         
         # Border
-        pygame.draw.rect(self.screen, WHITE, (150, 10, 300, 180), 2)
+        pygame.draw.rect(self.screen, WHITE, (150, 10, 300, 140), 2)
         
         # Title
         font_title = pygame.font.Font(None, 28)
-        title_surface = font_title.render("MISI", True, (255, 215, 0))
+        title_text = f"MISI {current_mission['id']}/5"
+        title_surface = font_title.render(title_text, True, (255, 215, 0))
         self.screen.blit(title_surface, (160, 20))
         
-        # Mission list
-        font_mission = pygame.font.Font(None, 22)
-        y_offset = 50
+        # Mission title
+        font_mission = pygame.font.Font(None, 24)
+        mission_surface = font_mission.render(current_mission['title'], True, WHITE)
+        self.screen.blit(mission_surface, (160, 55))
         
-        for mission in self.missions:
-            # Mission status icon
-            status_color = (0, 255, 0) if mission['completed'] else (255, 100, 100)
-            status_text = "✓" if mission['completed'] else "○"
-            status_surface = font_mission.render(status_text, True, status_color)
-            self.screen.blit(status_surface, (160, y_offset))
-            
-            # Mission title
-            title_color = (0, 255, 0) if mission['completed'] else WHITE
-            mission_surface = font_mission.render(mission['title'], True, title_color)
-            self.screen.blit(mission_surface, (185, y_offset))
-            
-            # Mission description (smaller)
-            if not mission['completed']:
-                font_desc = pygame.font.Font(None, 18)
-                desc_surface = font_desc.render(mission['description'], True, (180, 180, 180))
-                self.screen.blit(desc_surface, (185, y_offset + 22))
-            
-            y_offset += 60
+        # Mission description
+        font_desc = pygame.font.Font(None, 20)
+        desc_surface = font_desc.render(current_mission['description'], True, (180, 180, 180))
+        self.screen.blit(desc_surface, (160, 85))
+        
+        # Progress indicator
+        completed_count = sum(1 for m in self.missions if m['completed'])
+        progress_text = f"Selesai: {completed_count}/5"
+        progress_surface = font_desc.render(progress_text, True, (100, 200, 100))
+        self.screen.blit(progress_surface, (160, 115))
     
     def draw_notification(self):
         """Draw notification message"""
@@ -1130,13 +1532,17 @@ class Game:
     
     def draw_watering_prompt(self):
         """Draw action prompt at bottom of screen"""
-        if not self.watering and not self.picking and not self.cutting and not self.clock_ui_active:
+        if not self.watering and not self.picking and not self.cutting and not self.flower_watering and not self.mushroom_cutting and not self.clock_ui_active:
             text = None
             
             if self.is_near_bush():
                 text = "Tekan E untuk memetik buah"
             elif self.is_near_trunk():
                 text = "Tekan E untuk singkirkan kayu"
+            elif self.is_near_mushroom():
+                text = "Tekan E untuk singkirkan jamur"
+            elif self.is_near_flower():
+                text = "Tekan E untuk menyiram bunga"
             elif self.is_near_tree():
                 text = "Tekan E untuk menyiram pohon"
             
