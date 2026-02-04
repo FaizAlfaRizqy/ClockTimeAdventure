@@ -226,92 +226,18 @@ class Game:
     def generate_sprites(self):
         sprite_size = 16
         
-        skin = (255, 204, 153)
-        shirt = (51, 102, 204)
-        pants = (77, 51, 26)
+        for i in range(1, 3):
+            sprite = self.sprites[f'idle-front{i}']
         
         for i in range(1, 3):
-            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-            pygame.draw.rect(sprite, skin, (6, 2, 4, 4))
-            pygame.draw.rect(sprite, shirt, (5, 6, 6, 5))
-            pygame.draw.rect(sprite, pants, (5, 11, 3, 5))
-            pygame.draw.rect(sprite, pants, (8, 11, 3, 5))
-            self.sprites[f'idle-front{i}'] = sprite
+            sprite = self.sprites[f'idle-back{i}']
         
         for i in range(1, 3):
-            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-            pygame.draw.circle(sprite, skin, (8, 3), 2)
-            pygame.draw.rect(sprite, shirt, (5, 5, 6, 6))
-            pygame.draw.rect(sprite, pants, (5, 11, 3, 5))
-            pygame.draw.rect(sprite, pants, (8, 11, 3, 5))
-            self.sprites[f'idle-back{i}'] = sprite
+            sprite = self.sprites[f'idle-left{i}']
         
         for i in range(1, 3):
-            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-            pygame.draw.rect(sprite, skin, (7, 2, 3, 4))
-            pygame.draw.rect(sprite, shirt, (6, 6, 5, 5))
-            pygame.draw.rect(sprite, pants, (6, 11, 2, 5))
-            pygame.draw.rect(sprite, pants, (8, 11, 2, 5))
-            self.sprites[f'idle-left{i}'] = sprite
+            sprite = self.sprites[f'idle-right{i}']
         
-        for i in range(1, 3):
-            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-            pygame.draw.rect(sprite, skin, (6, 2, 3, 4))
-            pygame.draw.rect(sprite, shirt, (5, 6, 5, 5))
-            pygame.draw.rect(sprite, pants, (6, 11, 2, 5))
-            pygame.draw.rect(sprite, pants, (8, 11, 2, 5))
-            self.sprites[f'idle-right{i}'] = sprite
-        
-        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(sprite, skin, (6, 2, 4, 4))
-        pygame.draw.rect(sprite, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(sprite, pants, (4, 11, 3, 5))
-        pygame.draw.rect(sprite, pants, (9, 12, 3, 4))
-        self.sprites['walk-front1'] = sprite
-        
-        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(sprite, skin, (6, 2, 4, 4))
-        pygame.draw.rect(sprite, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(sprite, pants, (9, 11, 3, 5))
-        pygame.draw.rect(sprite, pants, (4, 12, 3, 4))
-        self.sprites['walk-front2'] = sprite
-        
-        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.circle(sprite, skin, (8, 3), 2)
-        pygame.draw.rect(sprite, shirt, (5, 5, 6, 6))
-        pygame.draw.rect(sprite, pants, (4, 11, 3, 5))
-        pygame.draw.rect(sprite, pants, (9, 12, 3, 4))
-        self.sprites['walk-back1'] = sprite
-        
-        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.circle(sprite, skin, (8, 3), 2)
-        pygame.draw.rect(sprite, shirt, (5, 5, 6, 6))
-        pygame.draw.rect(sprite, pants, (9, 11, 3, 5))
-        pygame.draw.rect(sprite, pants, (4, 12, 3, 4))
-        self.sprites['walk-back2'] = sprite
-        
-        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(sprite, skin, (7, 2, 3, 4))
-        pygame.draw.rect(sprite, shirt, (6, 6, 5, 5))
-        pygame.draw.rect(sprite, pants, (5, 11, 3, 5))
-        pygame.draw.rect(sprite, pants, (8, 12, 2, 4))
-        self.sprites['walk-left1'] = sprite
-        
-        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(sprite, skin, (7, 2, 3, 4))
-        pygame.draw.rect(sprite, shirt, (6, 6, 5, 5))
-        pygame.draw.rect(sprite, pants, (8, 11, 3, 5))
-        pygame.draw.rect(sprite, pants, (5, 12, 2, 4))
-        self.sprites['walk-left2'] = sprite
-        
-        sprite = self.sprites['walk-right1']
-        
-        sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(sprite, skin, (6, 2, 3, 4))
-        pygame.draw.rect(sprite, shirt, (5, 6, 5, 5))
-        pygame.draw.rect(sprite, pants, (6, 11, 3, 5))
-        pygame.draw.rect(sprite, pants, (8, 12, 2, 4))
-        self.sprites['walk-right2'] = sprite
     
     def load_watering_sprites(self):
         sprite_folder = 'char'
@@ -342,37 +268,13 @@ class Game:
         pants = (77, 51, 26)
         water_can = (150, 150, 150)
         
-        wl1 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(wl1, skin, (6, 2, 4, 4))
-        pygame.draw.rect(wl1, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(wl1, pants, (5, 11, 3, 5))
-        pygame.draw.rect(wl1, pants, (8, 11, 3, 5))
-        pygame.draw.rect(wl1, water_can, (2, 5, 3, 4))
-        self.sprites['watering-left1'] = pygame.transform.scale(wl1, (16 * SCALE, 16 * SCALE))
+        wl1 = self.sprites['watering-left1'] = pygame.transform.scale(wl1, (16 * SCALE, 16 * SCALE))
         
-        wl2 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(wl2, skin, (6, 2, 4, 4))
-        pygame.draw.rect(wl2, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(wl2, pants, (5, 11, 3, 5))
-        pygame.draw.rect(wl2, pants, (8, 11, 3, 5))
-        pygame.draw.rect(wl2, water_can, (1, 6, 3, 4))
-        self.sprites['watering-left2'] = pygame.transform.scale(wl2, (16 * SCALE, 16 * SCALE))
+        wl2 = self.sprites['watering-left2'] = pygame.transform.scale(wl2, (16 * SCALE, 16 * SCALE))
         
-        wr1 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(wr1, skin, (6, 2, 4, 4))
-        pygame.draw.rect(wr1, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(wr1, pants, (5, 11, 3, 5))
-        pygame.draw.rect(wr1, pants, (8, 11, 3, 5))
-        pygame.draw.rect(wr1, water_can, (11, 5, 3, 4))
-        self.sprites['watering-right1'] = pygame.transform.scale(wr1, (16 * SCALE, 16 * SCALE))
+        wr1 = self.sprites['watering-right1'] = pygame.transform.scale(wr1, (16 * SCALE, 16 * SCALE))
         
-        wr2 = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
-        pygame.draw.rect(wr2, skin, (6, 2, 4, 4))
-        pygame.draw.rect(wr2, shirt, (5, 6, 6, 5))
-        pygame.draw.rect(wr2, pants, (5, 11, 3, 5))
-        pygame.draw.rect(wr2, pants, (8, 11, 3, 5))
-        pygame.draw.rect(wr2, water_can, (12, 6, 3, 4))
-        self.sprites['watering-right2'] = pygame.transform.scale(wr2, (16 * SCALE, 16 * SCALE))
+        wr2 = self.sprites['watering-right2'] = pygame.transform.scale(wr2, (16 * SCALE, 16 * SCALE))
     
     def load_bush(self):
         bush1_path = os.path.join('char', 'bush', 'bush1.png')
