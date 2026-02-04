@@ -12,6 +12,7 @@ import pygame
 import sys
 import os
 import math
+import random
 from pathlib import Path
 
 # Initialize Pygame
@@ -42,15 +43,19 @@ DARK_BLUE = (30, 30, 100)
 
 class Game:
     def __init__(self):
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
         pygame.display.set_caption("Little Cat Time Adventure - Faiz")
         self.clock = pygame.time.Clock()
         self.running = True
+        
+        # Initialize sound mixer
+        pygame.mixer.init()
         
         # Load or create assets
         self.load_sprites()
         self.load_map()
         self.load_clock()
+        self.load_sounds()
         
         # Player
         self.player = {
@@ -117,10 +122,10 @@ class Game:
         
         # Mushrooms for removing
         self.mushrooms = [
-            {'x': 100, 'y': 200, 'removed': False},
+            {'x': 160, 'y': 180, 'removed': False},
             {'x': 450, 'y': 180, 'removed': False},
-            {'x': 200, 'y': 280, 'removed': False},
-            {'x': 380, 'y': 80, 'removed': False},
+            {'x': 20, 'y': 280, 'removed': False},
+            {'x': 350, 'y': 80, 'removed': False},
         ]
         self.load_mushroom()
         
@@ -195,7 +200,14 @@ class Game:
                 'required_hour': 9  # 9 o'clock = 270 degrees
             }
         ]
+        # Randomize mission order
+        random.shuffle(self.missions)
+        # Re-assign sequential IDs after shuffling
+        for i, mission in enumerate(self.missions, 1):
+            mission['id'] = i
+        
         self.mission_box_rect = pygame.Rect(150, 10, 300, 300)
+        self.play_again_button_rect = pygame.Rect(300, 450, 200, 60)
         
         # Notification system
         self.notification_text = ""
@@ -660,6 +672,38 @@ class Game:
                              (clock_full_size//2, clock_full_size//2), 
                              clock_full_size//2 - 10)
     
+    def load_sounds(self):
+        """Load background music and sound effects"""
+        bgm_path = os.path.join('char', 'bgm.mp3')
+        cut_path = os.path.join('char', 'cut.mp3')
+        watering_path = os.path.join('char', 'watering.mp3')
+        
+        # Load background music
+        if os.path.exists(bgm_path):
+            print(f"Loading background music from {bgm_path}...")
+            pygame.mixer.music.load(bgm_path)
+            pygame.mixer.music.set_volume(0.5)  # Set volume to 50%
+            pygame.mixer.music.play(-1)  # Loop indefinitely
+        else:
+            print("Background music not found")
+        
+        # Load sound effects
+        if os.path.exists(cut_path):
+            print(f"Loading cut sound from {cut_path}...")
+            self.cut_sound = pygame.mixer.Sound(cut_path)
+            self.cut_sound.set_volume(0.6)
+        else:
+            print("Cut sound not found")
+            self.cut_sound = None
+        
+        if os.path.exists(watering_path):
+            print(f"Loading watering sound from {watering_path}...")
+            self.watering_sound = pygame.mixer.Sound(watering_path)
+            self.watering_sound.set_volume(0.6)
+        else:
+            print("Watering sound not found")
+            self.watering_sound = None
+    
     def load_map(self):
         """Load map from PNG file or create default"""
         # Try loading from char folder first
@@ -750,6 +794,11 @@ class Game:
     
     def handle_mouse_click(self, pos):
         """Handle mouse clicks"""
+        # Check if play again button was clicked (when all missions complete)
+        if self.all_missions_completed() and self.play_again_button_rect.collidepoint(pos):
+            self.reset_game()
+            return
+        
         # Check if clock icon was clicked
         if self.clock_icon_rect.collidepoint(pos) and not self.clock_ui_active:
             self.clock_ui_active = True
@@ -781,6 +830,84 @@ class Game:
                     self.dragging_hand = 'hour'
                 elif minute_diff < 20:
                     self.dragging_hand = 'minute'
+    
+    def all_missions_completed(self):
+        """Check if all missions are completed"""
+        return all(mission['completed'] for mission in self.missions)
+    
+    def get_current_mission(self):
+        """Get the first incomplete mission"""
+        for mission in self.missions:
+            if not mission['completed']:
+                return mission
+        return None
+    
+    def can_do_mission_type(self, mission_title_keyword):
+        """Check if current mission matches the type (e.g., 'pohon', 'buah', 'kayu', 'bunga', 'jamur')"""
+        current = self.get_current_mission()
+        if current is None:
+            return False
+        return mission_title_keyword.lower() in current['title'].lower()
+    
+    def reset_game(self):
+        """Reset game to initial state"""
+        # Reset player position
+        self.player['x'] = 240
+        self.player['y'] = 160
+        self.player['direction'] = 'down'
+        self.player['state'] = 'idle'
+        
+        # Reset camera
+        self.camera_x = 0
+        self.camera_y = 0
+        
+        # Reset clock
+        self.hour_angle = 0
+        self.minute_angle = 0
+        self.clock_ui_active = False
+        
+        # Reset all bushes
+        for bush in self.bushes:
+            bush['picked'] = False
+        
+        # Reset all trunks
+        for trunk in self.trunks:
+            trunk['cut'] = False
+        
+        # Reset all flowers
+        for flower in self.flowers:
+            flower['watered'] = False
+        
+        # Reset all mushrooms
+        for mushroom in self.mushrooms:
+            mushroom['removed'] = False
+        
+        # Reset counters
+        self.fruits_picked = 0
+        self.trunks_cut = 0
+        self.flowers_watered = 0
+        self.mushrooms_removed = 0
+        
+        # Reset states
+        self.watering = False
+        self.picking = False
+        self.cutting = False
+        self.flower_watering = False
+        self.mushroom_cutting = False
+        
+        # Reset missions and randomize again
+        for mission in self.missions:
+            mission['completed'] = False
+        random.shuffle(self.missions)
+        for i, mission in enumerate(self.missions, 1):
+            mission['id'] = i
+        
+        # Reset notification
+        self.notification_text = ""
+        self.notification_timer = 0
+        
+        print("\n=== Game Restarted ===")
+        print("Missions randomized!")
     
     def angle_difference(self, a1, a2):
         """Calculate shortest difference between two angles"""
@@ -922,15 +1049,20 @@ class Game:
     
     def check_watering_action(self):
         """Check if player is near a tree and start watering"""
-        # Check if clock is set to correct time for active mission
-        mission = self.missions[0]  # First mission
+        # Check if current mission is watering trees
+        if not self.can_do_mission_type('pohon'):
+            print("Ini bukan misi yang aktif sekarang!")
+            return
         
-        if mission['completed']:
-            return  # Mission already completed
-            
+        mission = self.get_current_mission()
+        if mission is None:
+            return
+        
         if not self.is_clock_set_to_hour(mission['required_hour']):
-            # Clock not set to correct time, show message
             print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
+            return
+        if not self.is_minute_at_12():
+            print("Set jarum menit ke angka 12 terlebih dahulu!")
             return
         
         player_x = self.player['x']
@@ -952,6 +1084,10 @@ class Game:
                 self.watering = True
                 self.watering_timer = 0
                 
+                # Play watering sound
+                if self.watering_sound:
+                    self.watering_sound.play()
+                
                 # Complete mission if not completed
                 if not mission['completed']:
                     mission['completed'] = True
@@ -963,17 +1099,15 @@ class Game:
     
     def check_picking_action(self):
         """Check if player is near a bush and start picking"""
-        # Check if clock is set to correct time for picking mission
-        mission = self.missions[1]  # Second mission (picking)
-        
-        # Check if previous mission is completed
-        if not self.missions[0]['completed']:
-            print("Selesaikan misi sebelumnya terlebih dahulu!")
+        # Check if current mission is picking fruit
+        if not self.can_do_mission_type('buah'):
+            print("Ini bukan misi yang aktif sekarang!")
             return
         
-        if mission['completed']:
-            return  # Mission already completed
-            
+        mission = self.get_current_mission()
+        if mission is None:
+            return
+        
         if not self.is_clock_set_to_hour(mission['required_hour']):
             print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
             return
@@ -997,9 +1131,8 @@ class Game:
                     self.picking_timer = 0
                     self.fruits_picked += 1
                     
-                    # Check if mission is completed
+                    # Check if mission is completed (need 3 fruits)
                     if self.fruits_picked >= 3:
-                        mission = self.missions[1]  # Second mission
                         if not mission['completed']:
                             mission['completed'] = True
                             self.notification_text = f"MISI SELESAI: {mission['title']}!"
@@ -1010,17 +1143,15 @@ class Game:
     
     def check_cutting_action(self):
         """Check if player is near a trunk and start cutting"""
-        # Check if clock is set to correct time for cutting mission
-        mission = self.missions[2]  # Third mission (cutting)
-        
-        # Check if previous missions are completed
-        if not self.missions[1]['completed']:
-            print("Selesaikan misi sebelumnya terlebih dahulu!")
+        # Check if current mission is cutting wood
+        if not self.can_do_mission_type('kayu'):
+            print("Ini bukan misi yang aktif sekarang!")
             return
         
-        if mission['completed']:
-            return  # Mission already completed
-            
+        mission = self.get_current_mission()
+        if mission is None:
+            return
+        
         if not self.is_clock_set_to_hour(mission['required_hour']):
             print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
             return
@@ -1054,13 +1185,17 @@ class Game:
                     
                     # Cut the trunk
                     trunk['cut'] = True
+                    
+                    # Play cut sound
+                    if self.cut_sound:
+                        self.cut_sound.play()
+                    
                     self.cutting = True
                     self.cutting_timer = 0
                     self.trunks_cut += 1
                     
-                    # Check if mission is completed
+                    # Check if mission is completed (need 2 trunks)
                     if self.trunks_cut >= 2:
-                        mission = self.missions[2]  # Third mission
                         if not mission['completed']:
                             mission['completed'] = True
                             self.notification_text = f"MISI SELESAI: {mission['title']}!"
@@ -1071,17 +1206,15 @@ class Game:
     
     def check_flower_watering_action(self):
         """Check if player is near a flower and start watering"""
-        # Check if clock is set to correct time for flower watering mission
-        mission = self.missions[3]  # Fourth mission (flower watering)
-        
-        # Check if previous missions are completed
-        if not self.missions[2]['completed']:
-            print("Selesaikan misi sebelumnya terlebih dahulu!")
+        # Check if current mission is watering flowers
+        if not self.can_do_mission_type('bunga'):
+            print("Ini bukan misi yang aktif sekarang!")
             return
         
-        if mission['completed']:
-            return  # Mission already completed
-            
+        mission = self.get_current_mission()
+        if mission is None:
+            return
+        
         if not self.is_clock_set_to_hour(mission['required_hour']):
             print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
             return
@@ -1103,13 +1236,17 @@ class Game:
                         self.flower_watering_side = 'right'
                     
                     flower['watered'] = True
+                    
+                    # Play watering sound
+                    if self.watering_sound:
+                        self.watering_sound.play()
+                    
                     self.flower_watering = True
                     self.flower_watering_timer = 0
                     self.flowers_watered += 1
                     
-                    # Check if mission is completed
+                    # Check if mission is completed (need at least 1 flower)
                     if self.flowers_watered >= 1:
-                        mission = self.missions[3]  # Fourth mission
                         if not mission['completed']:
                             mission['completed'] = True
                             self.notification_text = f"MISI SELESAI: {mission['title']}!"
@@ -1120,17 +1257,15 @@ class Game:
     
     def check_mushroom_cutting_action(self):
         """Check if player is near a mushroom and start cutting"""
-        # Check if clock is set to correct time for mushroom removal mission
-        mission = self.missions[4]  # Fifth mission (mushroom removal)
-        
-        # Check if previous missions are completed
-        if not self.missions[3]['completed']:
-            print("Selesaikan misi sebelumnya terlebih dahulu!")
+        # Check if current mission is removing mushrooms
+        if not self.can_do_mission_type('jamur'):
+            print("Ini bukan misi yang aktif sekarang!")
             return
         
-        if mission['completed']:
-            return  # Mission already completed
-            
+        mission = self.get_current_mission()
+        if mission is None:
+            return
+        
         if not self.is_clock_set_to_hour(mission['required_hour']):
             print(f"Set jam ke {mission['required_hour']:02d}:00 terlebih dahulu!")
             return
@@ -1161,13 +1296,17 @@ class Game:
                     
                     # Remove the mushroom
                     mushroom['removed'] = True
+                    
+                    # Play cut sound
+                    if self.cut_sound:
+                        self.cut_sound.play()
+                    
                     self.mushroom_cutting = True
                     self.mushroom_cutting_timer = 0
                     self.mushrooms_removed += 1
                     
-                    # Check if mission is completed
+                    # Check if mission is completed (need all mushrooms)
                     if self.mushrooms_removed >= len(self.mushrooms):
-                        mission = self.missions[4]  # Fifth mission
                         if not mission['completed']:
                             mission['completed'] = True
                             self.notification_text = f"MISI SELESAI: {mission['title']}!"
@@ -1474,9 +1613,21 @@ class Game:
             self.screen.blit(title_surface, title_rect)
             
             font_subtitle = pygame.font.Font(None, 24)
-            subtitle_surface = font_subtitle.render("Selamat!", True, (255, 215, 0))
+            subtitle_surface = font_subtitle.render("Udah paham materinya?", True, (255, 215, 0))
             subtitle_rect = subtitle_surface.get_rect(center=(300, 85))
             self.screen.blit(subtitle_surface, subtitle_rect)
+            
+            # Draw Play Again button
+            mouse_pos = pygame.mouse.get_pos()
+            button_color = (100, 200, 100) if self.play_again_button_rect.collidepoint(mouse_pos) else (50, 150, 50)
+            pygame.draw.rect(self.screen, button_color, self.play_again_button_rect)
+            pygame.draw.rect(self.screen, WHITE, self.play_again_button_rect, 3)
+            
+            button_font = pygame.font.Font(None, 36)
+            button_text = button_font.render("Main Lagi", True, WHITE)
+            button_text_rect = button_text.get_rect(center=self.play_again_button_rect.center)
+            self.screen.blit(button_text, button_text_rect)
+            
             return
         
         # Draw box for current mission
